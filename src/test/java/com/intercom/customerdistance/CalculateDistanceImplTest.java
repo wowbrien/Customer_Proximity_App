@@ -4,9 +4,10 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CalculateDistanceTest {
+class CalculateDistanceImplTest {
 
     @Test
     void outputEligibleCustomers() {
+
     }
 }
