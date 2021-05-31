@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -29,41 +30,42 @@ public class CalculateDistanceImpl implements CalculateDistance {
         try {
             FileWriter outputEligibleCustomers = new FileWriter(CUSTOMERS_OUTPUT_FILE);
 
-            for (Map.Entry<Integer, String> eligibleCustomer : sortCustomerListAscending(generateCustomerMap(inputFileName))) {
-                outputEligibleCustomers.write(String.format("Customer Id: %d\tName: %s\n", eligibleCustomer.getKey(), eligibleCustomer.getValue()));
+            HashMap<Integer, String> customerMap = generateCustomerMap(inputFileName);
+
+            if (!customerMap.isEmpty()) {
+                for (Map.Entry<Integer, String> eligibleCustomer : sortCustomerListAscending(customerMap)) {
+                    outputEligibleCustomers.write(String.format("Customer Id: %d\tName: %s\n", eligibleCustomer.getKey(), eligibleCustomer.getValue()));
+                }
+                outputEligibleCustomers.close();
+                logger.info(String.format("Eligible customers printed to %s.", CUSTOMERS_OUTPUT_FILE));
             }
-            outputEligibleCustomers.close();
-            logger.info(String.format("Eligible customers printed to %s.", CUSTOMERS_OUTPUT_FILE));
-        } catch (Exception exception) {
-            logger.error("Error while outputting eligible customers.");
-            exception.printStackTrace();
+        } catch (IOException e) {
+            logger.error(String.format("Error outputting eligible customers to %s.", CUSTOMERS_OUTPUT_FILE));
         }
     }
 
     /**
      * Generates customer map based on input file given with key(user_id), value(name)
      *
-     * @param inputFileName the file name of the customers located in resources
+     * @param inputFilePath the file path of the customers located in resources
      * @return returns map of eligible customers for free food & drink
      */
-    private HashMap<Integer, String> generateCustomerMap(String inputFileName) {
+    private HashMap<Integer, String> generateCustomerMap(String inputFilePath) {
         final String LATITUDE = "latitude";
         final String LONGITUDE = "longitude";
         final String USER_ID = "user_id";
         final String NAME = "name";
-        final String inputFilePath = "src/main/resources/" + inputFileName;
 
         HashMap<Integer, String> eligibleCustomerMap = new HashMap<>();
         JSONObject customerEntryJson;
-
+        File inputFile = new File(inputFilePath);
 
         try {
-            File inputFile = new File(inputFilePath);
             Scanner lineReader = new Scanner(inputFile);
 
-            logger.info(String.format("Input file %s successfully opened.", inputFileName));
+            logger.info(String.format("Input file %s successfully opened.", inputFile.getName()));
             while (lineReader.hasNextLine()) {
-                customerEntryJson = JsonUtil.createJsonObject(lineReader.nextLine());
+                customerEntryJson = new JSONObject(lineReader.nextLine());
                 if (isCustomerEligible(customerEntryJson.getString(LONGITUDE), customerEntryJson.getString(LATITUDE))) {
                     eligibleCustomerMap.put(customerEntryJson.getInt(USER_ID), customerEntryJson.getString(NAME));
                 }
@@ -71,11 +73,9 @@ public class CalculateDistanceImpl implements CalculateDistance {
             lineReader.close();
 
         } catch (JSONException exception) {
-            logger.error(String.format("Given file %s has unexpected JSON format.", inputFileName));
-            exception.printStackTrace();
+            logger.error(String.format("Given file %s has unexpected JSON format.", inputFile.getName()));
         } catch (FileNotFoundException exception) {
-            logger.error(String.format("Given file %s not found in resources.", inputFileName));
-            exception.printStackTrace();
+            logger.error(String.format("Given file %s not found in resources.", inputFile.getName()));
         }
         return eligibleCustomerMap;
     }
